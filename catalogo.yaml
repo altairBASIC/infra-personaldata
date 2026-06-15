@@ -1,0 +1,19 @@
+version: "1.0"
+project: infra-datos-personal
+fuentes:
+  mail:
+    formato: mbox
+    bronze_path: "s3://bronze/mail/{ingest_run_id}/raw.mbox"
+    silver_path: "silver/mail/year={yyyy}/month={mm}/"
+    campos:
+      - {nombre: signal_id, tipo: string, obligatorio: true}
+      - {nombre: timestamp, tipo: datetime, obligatorio: true, regla: timestamp_valido}
+      - {nombre: source, tipo: string, obligatorio: true, valor_fijo: mail}
+      - {nombre: actor, tipo: string, obligatorio: true, regla: actor_email_valido}
+      - {nombre: channel, tipo: string, obligatorio: false}
+      - {nombre: content_text, tipo: string, obligatorio: true, regla: content_no_vacio}
+      - {nombre: content_meta, tipo: json, obligatorio: false}
+      - {nombre: entities, tipo: "list[string]", obligatorio: false}
+      - {nombre: raw_id, tipo: string, obligatorio: true, regla: raw_id_unico}
+      - {nombre: ingest_run_id, tipo: string, obligatorio: true}
+    sensibilidad: alta

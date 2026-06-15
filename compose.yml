@@ -1,0 +1,83 @@
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "-m", "pipeline.main"]
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_SECURE: "false"
+      MINIO_BUCKET_BRONZE: bronze
+      MBOX_PATH: /app/data/input/correos.mbox
+      SILVER_PATH: /app/data/silver
+      CHROMA_PATH: /app/data/chroma
+      METRICS_PATH: /app/data/metrics
+      LINAJE_PATH: /app/data/linaje.json
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-MiniLM-L12-v2}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data/input:/app/data/input:ro
+      - silver_data:/app/data/silver
+      - chroma_data:/app/data/chroma
+      - model_cache:/home/appuser/.cache
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SILVER_PATH: /app/data/silver
+      CHROMA_PATH: /app/data/chroma
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-MiniLM-L12-v2}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    volumes:
+      - silver_data:/app/data/silver:ro
+      - chroma_data:/app/data/chroma:ro
+      - model_cache:/home/appuser/.cache
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    networks:
+      - internal
+      - external
+
+volumes:
+  minio_data:
+  silver_data:
+  chroma_data:
+  model_cache:
+
+networks:
+  internal:
+    internal: true
+  external:

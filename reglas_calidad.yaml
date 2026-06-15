@@ -1,0 +1,19 @@
+reglas:
+  - id: r01_actor_email_valido
+    descripcion: "actor debe cumplir formato de email RFC 5322 simplificado"
+    severidad: error
+  - id: r02_timestamp_valido
+    descripcion: "timestamp no nulo, no futuro (> ahora + 1 día), no anterior a 2000-01-01"
+    severidad: error
+  - id: r03_content_no_vacio
+    descripcion: "content_text con longitud > 10 caracteres tras strip"
+    severidad: error
+  - id: r04_raw_id_unico
+    descripcion: "Message-ID no debe repetirse en el mismo run"
+    severidad: error
+  - id: r05_encoding_valido
+    descripcion: "content_text debe ser UTF-8 válido tras decodificación"
+    severidad: error
+  - id: r06_signal_id_deterministico
+    descripcion: "signal_id == uuid5(NAMESPACE_URL, source + raw_id)"
+    severidad: error
