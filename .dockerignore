@@ -1,0 +1,17 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+data/silver/
+data/chroma/
+metrics/
+.mypy_cache/
+.ruff_cache/
+*.log
+.env
