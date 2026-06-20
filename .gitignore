@@ -17,3 +17,10 @@ linaje.json
 .mypy_cache/
 .ruff_cache/
 *.log
+silver_prueba/
+gold_prueba/
+metrics_prueba/
+linaje_prueba.json
+pruebag.py
+prueba.py
+data/gold/
