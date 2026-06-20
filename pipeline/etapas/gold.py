@@ -128,8 +128,19 @@ def escribir_reporte_calidad(con: duckdb.DuckDBPyConnection,
     return reporte
 
 
-def ejecutar_gold(run_id: str | None = None) -> None:
-    """Orquesta la construcción de las tablas Gold, el linaje y el reporte."""
+def ejecutar_gold(run_id: str | None = None,
+                  linaje: LinajeWriter | None = None) -> None:
+    """Orquesta la construcción de las tablas Gold, el linaje y el reporte.
+
+    Args:
+        run_id: identificador del run. Solo se usa si esta función crea su
+            propio linaje (cuando ``linaje`` es None).
+        linaje: un LinajeWriter ya existente. Si se pasa, Gold registra sus
+            etapas en él y NO lo cierra (lo cierra quien lo creó). Si es None,
+            Gold crea su propio linaje y lo cierra al terminar. Esto permite
+            tanto correr Gold de forma independiente como integrarlo en un
+            pipeline mayor que comparte un único linaje.
+    """
     silver = _silver_glob()
     gold_dir = _gold_dir()
     gold_dir.mkdir(parents=True, exist_ok=True)
@@ -141,7 +152,12 @@ def ejecutar_gold(run_id: str | None = None) -> None:
         f"SELECT COUNT(*) FROM read_parquet('{silver}')"
     ).fetchone()[0]
 
-    linaje = LinajeWriter(_linaje_path(), run_id)
+    # Si nos pasan un linaje, lo usamos (y NO lo cerramos al final).
+    # Si no, creamos el nuestro y lo cerramos nosotros.
+    linaje_propio = linaje is None
+    if linaje_propio:
+        linaje = LinajeWriter(_linaje_path(), run_id)
+
     print("Construyendo zona Gold...")
 
     tablas = {
@@ -195,7 +211,9 @@ def ejecutar_gold(run_id: str | None = None) -> None:
     escribir_reporte_calidad(con, list(tablas.keys()))
 
     con.close()
-    linaje.cerrar()
+    # Solo cerramos el linaje si lo creamos nosotros.
+    if linaje_propio:
+        linaje.cerrar()
     print("Gold completado. Linaje y reporte registrados.")
 
 
