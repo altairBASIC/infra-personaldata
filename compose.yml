@@ -31,6 +31,7 @@ services:
       MINIO_BUCKET_BRONZE: bronze
       MBOX_PATH: /app/data/input/correos.mbox
       SILVER_PATH: /app/data/silver
+      GOLD_PATH: /app/data/gold
       CHROMA_PATH: /app/data/chroma
       METRICS_PATH: /app/data/metrics
       LINAJE_PATH: /app/data/linaje.json
@@ -40,8 +41,9 @@ services:
     volumes:
       - ./data/input:/app/data/input:ro
       - silver_data:/app/data/silver
+      - gold_data:/app/data/gold
       - chroma_data:/app/data/chroma
-      - model_cache:/home/appuser/.cache
+      - model_cache:/app/data/.cache
     depends_on:
       minio:
         condition: service_healthy
@@ -56,6 +58,7 @@ services:
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       SILVER_PATH: /app/data/silver
+      GOLD_PATH: /app/data/gold
       CHROMA_PATH: /app/data/chroma
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-MiniLM-L12-v2}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -63,8 +66,9 @@ services:
       - "8000:8000"
     volumes:
       - silver_data:/app/data/silver:ro
+      - gold_data:/app/data/gold:ro
       - chroma_data:/app/data/chroma:ro
-      - model_cache:/home/appuser/.cache
+      - model_cache:/app/data/.cache
     depends_on:
       pipeline:
         condition: service_completed_successfully
@@ -75,6 +79,7 @@ services:
 volumes:
   minio_data:
   silver_data:
+  gold_data:
   chroma_data:
   model_cache:
 

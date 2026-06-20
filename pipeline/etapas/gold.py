@@ -14,6 +14,11 @@ Tablas generadas:
   3. distribucion_por_canal — qué tipo de correo predomina
   4. recencia_por_actor     — última vez que se supo de cada contacto
   5. resumen_general        — totales globales (vista panorámica)
+
+Se puede correr de dos formas:
+  - Independiente: `python -m pipeline.etapas.gold` (crea su propio linaje).
+  - Integrado: `ejecutar_gold(run_id=..., linaje=linaje_del_pipeline)` para
+    compartir el linaje con el resto del pipeline.
 """
 
 from __future__ import annotations

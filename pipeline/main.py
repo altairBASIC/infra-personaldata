@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from pipeline.etapas.calidad import aplica_todas, escribir_reporte
 from pipeline.etapas.embeddings import indexar_en_chroma
+from pipeline.etapas.gold import ejecutar_gold
 from pipeline.etapas.ingesta import ingestar_mbox
 from pipeline.etapas.normaliza import (
     escribir_silver,
@@ -138,7 +139,7 @@ def ejecutar_pipeline(
         filas_escritas=total_indexados,
         duracion_s=duracion_embeddings,
     )
-
+    ejecutar_gold(run_id=rid, linaje=linaje)
     resultado = linaje.cerrar()
     logger.info("Pipeline completado: %d señales válidas indexadas", len(df_valido))
     return resultado
