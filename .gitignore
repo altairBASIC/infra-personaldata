@@ -9,9 +9,7 @@ __pycache__/
 dist/
 build/
 .eggs/
-data/input/
-data/silver/
-data/chroma/
+data/
 metrics/
 linaje.json
 .mypy_cache/
@@ -23,4 +21,3 @@ metrics_prueba/
 linaje_prueba.json
 pruebag.py
 prueba.py
-data/gold/
