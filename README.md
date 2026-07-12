@@ -120,8 +120,7 @@ infra-personaldata/
     ├── silver/                  # Parquet particionados por año/mes
     ├── gold/                    # Tablas analíticas pre-computadas
     ├── chroma/                  # Base de datos vectorial persistente
-    ├── metrics/                 # Reportes de calidad y Gold en JSON
-    └── linaje.json              # Registro de linaje por ejecución
+    └── metrics/                 # Reportes de calidad/Gold y linaje.json (bind mount, persiste en el host)
 ```
 
 ---
@@ -281,7 +280,7 @@ SILVER_PATH=/app/data/silver
 GOLD_PATH=/app/data/gold
 CHROMA_PATH=/app/data/chroma
 METRICS_PATH=/app/data/metrics
-LINAJE_PATH=/app/data/linaje.json
+LINAJE_PATH=/app/data/metrics/linaje.json
 
 # ─── Embeddings ─────────────────────────────────────────────────────────────
 EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12-v2
@@ -496,7 +495,7 @@ print(df)
 # Verificar linaje
 python -c "
 import json
-with open('data/linaje.json') as f:
+with open('data/metrics/linaje.json') as f:
     linaje = json.load(f)
 print(f'run_id: {linaje[\"ingest_run_id\"]}')
 for etapa in linaje['etapas']:
@@ -556,7 +555,7 @@ python -m pytest tests/ -v -m "not slow"
 docker compose -f compose.yml down -v
 
 # Eliminar datos generados localmente
-rm -rf data/silver data/gold data/chroma data/metrics data/linaje.json
+rm -rf data/silver data/gold data/chroma data/metrics
 ```
 
 Para una nueva ejecución reproducible, repetir desde el Paso 4.
@@ -691,7 +690,7 @@ make test
 
 ## Linaje y Observabilidad
 
-Cada ejecución del pipeline genera `data/linaje.json`:
+Cada ejecución del pipeline genera `data/metrics/linaje.json` (bind mount: persiste en el host tras la corrida):
 
 ```json
 {

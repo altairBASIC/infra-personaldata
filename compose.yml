@@ -34,12 +34,13 @@ services:
       GOLD_PATH: /app/data/gold
       CHROMA_PATH: /app/data/chroma
       METRICS_PATH: /app/data/metrics
-      LINAJE_PATH: /app/data/linaje.json
+      LINAJE_PATH: /app/data/metrics/linaje.json
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-MiniLM-L12-v2}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - ./data/input:/app/data/input:ro
+      - ./data/metrics:/app/data/metrics
       - silver_data:/app/data/silver
       - gold_data:/app/data/gold
       - chroma_data:/app/data/chroma
