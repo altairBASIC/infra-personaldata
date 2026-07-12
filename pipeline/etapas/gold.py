@@ -179,9 +179,10 @@ def ejecutar_gold(run_id: str | None = None,
             ORDER BY mes
         """,
         "distribucion_por_canal": f"""
-            SELECT channel, COUNT(*) AS total_correos
+            SELECT COALESCE(channel::VARCHAR, '(sin canal)') AS channel,
+                   COUNT(*) AS total_correos
             FROM read_parquet('{silver}')
-            GROUP BY channel
+            GROUP BY 1
             ORDER BY total_correos DESC
         """,
         "recencia_por_actor": f"""
@@ -194,7 +195,7 @@ def ejecutar_gold(run_id: str | None = None,
             SELECT
                 COUNT(*) AS total_correos,
                 COUNT(DISTINCT actor) AS total_contactos,
-                COUNT(DISTINCT channel) AS total_canales,
+                COUNT(DISTINCT COALESCE(channel::VARCHAR, '(sin canal)')) AS total_canales,
                 MIN(timestamp) AS primer_correo,
                 MAX(timestamp) AS ultimo_correo
             FROM read_parquet('{silver}')
