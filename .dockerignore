@@ -8,9 +8,9 @@ __pycache__/
 dist/
 build/
 .eggs/
-data/silver/
-data/chroma/
+data/
 metrics/
+linaje.json
 .mypy_cache/
 .ruff_cache/
 *.log
