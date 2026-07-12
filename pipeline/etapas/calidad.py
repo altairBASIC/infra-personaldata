@@ -188,6 +188,9 @@ def escribir_reporte(
     reporte = {
         "total_entrada": total_entrada,
         "total_validas": total_validas,
+        # Una fila que viola varias reglas se cuenta en cada una de ellas;
+        # este campo es el total de filas únicas realmente descartadas.
+        "total_descartadas_unicas": total_entrada - total_validas,
         "descartadas_por_regla": descartadas_por_regla,
         "tasa_error_global": round(tasa_error, 4),
     }
