@@ -72,6 +72,11 @@ services:
         condition: service_completed_successfully
     networks:
       - internal
+      # En podman rootless (macOS) una red `internal: true` no permite
+      # reenviar puertos publicados al host: la API necesita además una
+      # red con salida para que localhost:8000 funcione. El pipeline y
+      # MinIO permanecen solo en la red interna (sin egress).
+      - expuesta
 
 volumes:
   minio_data:
@@ -82,3 +87,4 @@ volumes:
 networks:
   internal:
     internal: true
+  expuesta: {}
