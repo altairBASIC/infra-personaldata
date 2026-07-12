@@ -43,13 +43,11 @@ services:
       - silver_data:/app/data/silver
       - gold_data:/app/data/gold
       - chroma_data:/app/data/chroma
-      - model_cache:/app/data/.cache
     depends_on:
       minio:
         condition: service_healthy
     networks:
       - internal
-      - external
 
   api:
     build:
@@ -68,22 +66,18 @@ services:
       - silver_data:/app/data/silver:ro
       - gold_data:/app/data/gold:ro
       - chroma_data:/app/data/chroma:ro
-      - model_cache:/app/data/.cache
     depends_on:
       pipeline:
         condition: service_completed_successfully
     networks:
       - internal
-      - external
 
 volumes:
   minio_data:
   silver_data:
   gold_data:
   chroma_data:
-  model_cache:
 
 networks:
   internal:
     internal: true
-  external:

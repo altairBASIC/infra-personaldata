@@ -72,7 +72,7 @@
 infra-personaldata/
 │
 ├── compose.yml                  # Orquestación OCI-neutral (Docker y Podman)
-├── Dockerfile                   # Imagen multi-stage, usuario no-root (appuser)
+├── Dockerfile                   # Imagen con modelo de embeddings horneado, usuario no-root (appuser)
 ├── Makefile                     # Detección automática Docker/Podman
 ├── requirements.txt             # Dependencias Python con versiones fijadas (==)
 ├── .env.example                 # Plantilla de variables de entorno (sin secretos)
@@ -149,7 +149,7 @@ graph TB
             end
         end
 
-        subgraph EXTERNAL["Red: external (puerto 8000 expuesto)"]
+        subgraph EXTERNAL["Contenedor api — red internal, puerto 8000 publicado (sin egress)"]
             subgraph API["Contenedor: api"]
                 FASTAPI["🚀 FastAPI + Uvicorn<br/>:8000"]
                 CONSULTA["GET /signals<br/>(DuckDB → Silver/Gold Parquet)"]
@@ -741,7 +741,7 @@ Cada ejecución del pipeline genera `data/linaje.json`:
 | **Polars + Parquet** | Columnar, eficiente en memoria, particionamiento nativo por año/mes |
 | **DuckDB para consultas** | Lee Parquet directamente sin servidor. Ideal para análisis ad-hoc sobre la capa Silver/Gold |
 | **Chunking con overlap** | Textos largos se dividen en chunks de 512 tokens con 50 tokens de solapamiento para no perder contexto en los límites |
-| **Red `internal` sin egress** | El pipeline no puede hacer conexiones salientes. Aislamiento de seguridad por diseño |
+| **Red `internal` sin egress** | Los tres servicios (minio, pipeline, api) corren SOLO en la red `internal: true`: ninguno puede hacer conexiones salientes. El modelo de embeddings viene horneado en la imagen y `HF_HUB_OFFLINE=1` garantiza que en runtime nunca se consulta huggingface.co |
 | **`appuser` UID 1000** | Sin root en contenedor. Compatible con Podman rootless y entornos con restricciones de seguridad |
 | **`threading.Lock` en linaje** | `LinajeWriter` es seguro para uso desde múltiples threads o etapas concurrentes |
 | **Versiones `==` en requirements** | Reproducibilidad exacta. `pip install -r requirements.txt` siempre instala el mismo grafo de dependencias |
@@ -751,6 +751,23 @@ Cada ejecución del pipeline genera `data/linaje.json`:
 ## Restricciones y Consideraciones
 
 - **No hay datos reales en el repositorio.** El directorio `data/` no está versionado en git. Los tests usan únicamente fixtures sintéticas.
-- **El modelo de embeddings se descarga en el primer `build`** (~400 MB). Requiere conexión a internet durante la construcción de la imagen.
+- **El modelo de embeddings se descarga durante el `build`** (~470 MB) y queda horneado en la imagen (`/opt/hf-cache`). El build requiere internet; el **runtime es 100% offline** (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, y los servicios corren solo en la red `internal: true`).
+- **Verificación de no-egress** (los puertos publicados siguen funcionando en Podman rootless sobre la red interna):
+
+  ```bash
+  # Desde el contenedor api: la conexión saliente debe FALLAR
+  podman exec proyectofinal_api_1 python -c \
+    "import socket; s=socket.socket(); s.settimeout(5); s.connect(('1.1.1.1',443))"
+  # Esperado: OSError: [Errno 101] Network is unreachable
+
+  # La API sigue accesible desde el host por el puerto publicado
+  curl http://localhost:8000/health
+  # Esperado: {"status":"ok"}
+  ```
+
+  > Limitación conocida: en Podman 4.9, aardvark-dns aún reenvía consultas DNS
+  > al host desde redes internas (resolver nombres externos funciona, pero todo
+  > tráfico TCP/UDP saliente está bloqueado). Versiones más nuevas de netavark
+  > bloquean también el DNS upstream en redes `internal`.
 - **Desarrollo en Windows** requiere Docker Desktop o Podman Desktop con soporte WSL2.
 - **La semilla del generador** (`--semilla 42`) controla el RNG. Cambiarla produce un dataset diferente, aunque las reglas de calidad y los IDs siguen siendo determinísticos.
