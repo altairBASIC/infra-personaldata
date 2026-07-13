@@ -34,22 +34,21 @@ services:
       GOLD_PATH: /app/data/gold
       CHROMA_PATH: /app/data/chroma
       METRICS_PATH: /app/data/metrics
-      LINAJE_PATH: /app/data/linaje.json
+      LINAJE_PATH: /app/data/metrics/linaje.json
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-MiniLM-L12-v2}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - ./data/input:/app/data/input:ro
+      - ./data/metrics:/app/data/metrics
       - silver_data:/app/data/silver
       - gold_data:/app/data/gold
       - chroma_data:/app/data/chroma
-      - model_cache:/app/data/.cache
     depends_on:
       minio:
         condition: service_healthy
     networks:
       - internal
-      - external
 
   api:
     build:
@@ -68,22 +67,18 @@ services:
       - silver_data:/app/data/silver:ro
       - gold_data:/app/data/gold:ro
       - chroma_data:/app/data/chroma:ro
-      - model_cache:/app/data/.cache
     depends_on:
       pipeline:
         condition: service_completed_successfully
     networks:
       - internal
-      - external
 
 volumes:
   minio_data:
   silver_data:
   gold_data:
   chroma_data:
-  model_cache:
 
 networks:
   internal:
     internal: true
-  external:

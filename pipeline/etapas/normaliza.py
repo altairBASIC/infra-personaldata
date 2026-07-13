@@ -169,15 +169,19 @@ def normalizar_mbox_desde_archivo(
                 "channel": pl.Utf8,
                 "content_text": pl.Utf8,
                 "content_meta": pl.Utf8,
-                "entities": pl.Utf8,
+                "entities": pl.List(pl.Utf8),
                 "raw_id": pl.Utf8,
                 "ingest_run_id": pl.Utf8,
             }
         )
 
     df = pl.DataFrame(registros)
+    # Casts explícitos al tipo del catálogo: con columnas 100% nulas Polars
+    # infiere Null y el Parquet quedaría tipado INT32 en vez de string.
     df = df.with_columns(
         pl.col("timestamp").cast(pl.Datetime("us", "UTC")),
+        pl.col("channel").cast(pl.Utf8),
+        pl.col("entities").cast(pl.List(pl.Utf8)),
     )
     return df
 

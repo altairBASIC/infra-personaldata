@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +16,24 @@ from pipeline.utils.logging_cfg import get_logger
 logger = get_logger("embeddings")
 
 
+@lru_cache(maxsize=2)
+def _cargar_modelo_en_cache(nombre_modelo: str) -> Any:
+    """Carga el modelo de sentence-transformers (una sola vez por proceso).
+
+    Args:
+        nombre_modelo: Nombre del modelo a cargar.
+
+    Returns:
+        Modelo SentenceTransformer cargado.
+    """
+    from sentence_transformers import SentenceTransformer
+
+    logger.info("Cargando modelo de embeddings: %s", nombre_modelo)
+    return SentenceTransformer(nombre_modelo, device="cpu")
+
+
 def _cargar_modelo(nombre_modelo: str | None = None) -> Any:
-    """Carga el modelo de sentence-transformers.
+    """Retorna el modelo de embeddings, cacheado a nivel de proceso.
 
     Args:
         nombre_modelo: Nombre del modelo. Si es ``None``, usa la variable
@@ -25,13 +42,10 @@ def _cargar_modelo(nombre_modelo: str | None = None) -> Any:
     Returns:
         Modelo SentenceTransformer cargado.
     """
-    from sentence_transformers import SentenceTransformer
-
     modelo = nombre_modelo or os.environ.get(
         "EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
     )
-    logger.info("Cargando modelo de embeddings: %s", modelo)
-    return SentenceTransformer(modelo, device="cpu")
+    return _cargar_modelo_en_cache(modelo)
 
 
 def _chunk_texto(texto: str, max_tokens: int = 512, solapamiento: int = 50) -> list[str]:
