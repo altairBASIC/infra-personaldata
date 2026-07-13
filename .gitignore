@@ -20,4 +20,8 @@ gold_prueba/
 metrics_prueba/
 linaje_prueba.json
 pruebag.py
-prueba.py.venv-mcp/
+prueba.py
+.venv-mcp/
+gemini_*.json
+probe_*.json
+gemini_raw*
