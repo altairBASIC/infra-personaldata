@@ -25,6 +25,7 @@
 - [API REST](#api-rest)
 - [Tests](#tests)
 - [Linaje y Observabilidad](#linaje-y-observabilidad)
+- [Capa de Agente (MCP + Hermes)](#capa-de-agente-mcp--hermes)
 - [Diseño y Decisiones Técnicas](#diseño-y-decisiones-técnicas)
 
 ---
@@ -731,6 +732,25 @@ Cada ejecución del pipeline genera `data/metrics/linaje.json` (bind mount: pers
 
 ---
 
+## Capa de Agente (MCP + Hermes)
+
+La infraestructura puede actuar como sustrato de un agente de IA. El directorio
+`mcp_correos/` contiene un servidor Model Context Protocol que expone dos tools
+(`buscar_correos` y `consultar_senales`) como adaptador delgado sobre la API
+REST, y la guia completa para conectar Hermes Agent en modo local (Ollama, sin
+egress del agente) o nube (Gemini, con egress documentado).
+
+- Guia de instalacion y configuracion: `mcp_correos/README.md`
+- Metodologia y resultados del benchmark del agente local:
+  `docs/benchmark_agente_local.md`
+- Guia para agentes (se carga al prompt desde el cwd): `AGENTS.md`
+
+Resultado resumido (qwen3:8b-64k en un MacBook M4 de 16 GB): el agente invoca
+las tools del MCP de forma confiable, cita fuentes verificables y admite cuando
+no hay resultados, con una latencia media de 78.4 s por consulta en caliente.
+
+---
+
 ## Diseño y Decisiones Técnicas
 
 | Decisión | Justificación |
@@ -740,7 +760,7 @@ Cada ejecución del pipeline genera `data/metrics/linaje.json` (bind mount: pers
 | **Polars + Parquet** | Columnar, eficiente en memoria, particionamiento nativo por año/mes |
 | **DuckDB para consultas** | Lee Parquet directamente sin servidor. Ideal para análisis ad-hoc sobre la capa Silver/Gold |
 | **Chunking con overlap** | Textos largos se dividen en chunks de 512 tokens con 50 tokens de solapamiento para no perder contexto en los límites |
-| **Red `internal` sin egress** | Los tres servicios (minio, pipeline, api) corren SOLO en la red `internal: true`: ninguno puede hacer conexiones salientes. El modelo de embeddings viene horneado en la imagen y `HF_HUB_OFFLINE=1` garantiza que en runtime nunca se consulta huggingface.co |
+| **Red `internal` sin egress** | MinIO y el pipeline corren SOLO en la red `internal: true`: no pueden hacer conexiones salientes. La API se une ademas a una red `expuesta` porque en podman rootless (macOS) una red interna no permite reenviar el puerto 8000 al host; la API no realiza conexiones salientes en runtime. El modelo de embeddings viene horneado en la imagen y `HF_HUB_OFFLINE=1` garantiza que en runtime nunca se consulta huggingface.co |
 | **`appuser` UID 1000** | Sin root en contenedor. Compatible con Podman rootless y entornos con restricciones de seguridad |
 | **`threading.Lock` en linaje** | `LinajeWriter` es seguro para uso desde múltiples threads o etapas concurrentes |
 | **Versiones `==` en requirements** | Reproducibilidad exacta. `pip install -r requirements.txt` siempre instala el mismo grafo de dependencias |
@@ -750,7 +770,7 @@ Cada ejecución del pipeline genera `data/metrics/linaje.json` (bind mount: pers
 ## Restricciones y Consideraciones
 
 - **No hay datos reales en el repositorio.** El directorio `data/` no está versionado en git. Los tests usan únicamente fixtures sintéticas.
-- **El modelo de embeddings se descarga durante el `build`** (~470 MB) y queda horneado en la imagen (`/opt/hf-cache`). El build requiere internet; el **runtime es 100% offline** (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, y los servicios corren solo en la red `internal: true`).
+- **El modelo de embeddings se descarga durante el `build`** (~470 MB) y queda horneado en la imagen (`/opt/hf-cache`). El build requiere internet; el **runtime es 100% offline** (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`; MinIO y el pipeline corren solo en la red `internal: true`, y la API suma una red `expuesta` unicamente para publicar el puerto 8000 en podman rootless).
 - **Verificación de no-egress** (los puertos publicados siguen funcionando en Podman rootless sobre la red interna):
 
   ```bash
