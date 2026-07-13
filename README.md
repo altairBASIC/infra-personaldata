@@ -1,4 +1,4 @@
-# Infraestructura de Datos Personal -- Pipeline de Correo
+# Infraestructura de Datos Personal - Pipeline de Correo
 
 Convierte un archivo de correos (.mbox) en una base consultable por lenguaje natural, sin que los datos salgan del equipo.
 
