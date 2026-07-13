@@ -1,6 +1,8 @@
-# Infraestructura de Datos Personal — Pipeline de Correo
+# Infraestructura de Datos Personal -- Pipeline de Correo
 
-> Pipeline reproducible, conteinerizado y rootless que ingesta correo desde archivos `.mbox`, lo normaliza siguiendo la **arquitectura medallón** (Bronze → Silver → Gold), aplica reglas de calidad declarativas, genera embeddings semánticos e indexa los datos para exponerlos vía una API REST local.
+Convierte un archivo de correos (.mbox) en una base consultable por lenguaje natural, sin que los datos salgan del equipo.
+
+> Pipeline reproducible, conteinerizado y rootless que ingesta correo desde archivos `.mbox`, lo normaliza siguiendo la **arquitectura medallon** (Bronze, Silver, Gold), aplica reglas de calidad declarativas, genera embeddings semanticos e indexa los datos para exponerlos via una API REST local.
 
 **Proyecto académico** · INFB6074 · Universidad Tecnológica Metropolitana (UTEM)
 
@@ -149,7 +151,7 @@ graph TB
             end
         end
 
-        subgraph EXTERNAL["Contenedor api — red internal, puerto 8000 publicado (sin egress)"]
+        subgraph EXTERNAL["Contenedor api (red internal, puerto 8000 publicado, sin egress)"]
             subgraph API["Contenedor: api"]
                 FASTAPI["🚀 FastAPI + Uvicorn<br/>:8000"]
                 CONSULTA["GET /signals<br/>(DuckDB → Silver/Gold Parquet)"]
@@ -198,7 +200,7 @@ graph TB
     style VOLUMES fill:#fce7f3,stroke:#db2777
 ```
 
-### Flujo de Datos — Capas Medallón
+### Flujo de Datos: Capas Medallon
 
 ```mermaid
 flowchart LR
@@ -230,7 +232,7 @@ flowchart LR
 
 ### Prerrequisitos
 
-**Opción A — Con contenedores (recomendado):**
+**Opcion A.** Con contenedores (recomendado):
 
 | Requisito | Versión mínima | Verificación |
 |---|---|---|
@@ -238,7 +240,7 @@ flowchart LR
 | **o** Podman + Podman Compose | Podman 4.x | `podman --version` |
 | Git | cualquier versión reciente | `git --version` |
 
-**Opción B — Desarrollo local sin contenedores:**
+**Opcion B.** Desarrollo local sin contenedores:
 
 | Requisito | Versión | Verificación |
 |---|---|---|
@@ -299,14 +301,14 @@ LOG_LEVEL=INFO                     # DEBUG | INFO | WARNING | ERROR
 
 ### Preparar Datos de Entrada
 
-**Opción A — Usar correos reales:**
+**Opcion A.** Usar correos reales:
 
 ```bash
 mkdir -p data/input
 cp /ruta/a/tu/archivo.mbox data/input/correos.mbox
 ```
 
-**Opción B — Generar datos sintéticos reproducibles:**
+**Opcion B.** Generar datos sinteticos reproducibles:
 
 ```bash
 # Instalar dependencias mínimas (solo para el generador)
@@ -416,7 +418,7 @@ python -m pytest tests/ -v -m "not slow"
 
 Esta guía permite a cualquier desarrollador obtener **exactamente los mismos resultados** partiendo desde cero.
 
-### Paso 1 — Clonar y verificar la versión exacta
+### Paso 1. Clonar y verificar la version exacta
 
 ```bash
 git clone https://github.com/<usuario>/infra-personaldata.git
@@ -426,7 +428,7 @@ cd infra-personaldata
 git log --oneline -5
 ```
 
-### Paso 2 — Preparar el entorno
+### Paso 2. Preparar el entorno
 
 ```bash
 # Copiar variables de entorno (no modificar los valores para reproducibilidad exacta)
@@ -436,7 +438,7 @@ cp .env.example .env
 mkdir -p data/input
 ```
 
-### Paso 3 — Generar el dataset de referencia
+### Paso 3. Generar el dataset de referencia
 
 El dataset sintético de referencia se genera con la semilla `42` y `500` correos:
 
@@ -457,7 +459,7 @@ print(f'Primer Message-ID: {msgs[0][\"Message-ID\"]}')
 # Primer Message-ID: <msg-001-...@synthetic.local>
 ```
 
-### Paso 4 — Ejecutar el pipeline completo
+### Paso 4. Ejecutar el pipeline completo
 
 ```bash
 # Construir imágenes (primera vez: descarga el modelo de embeddings ~400MB)
@@ -473,7 +475,7 @@ El pipeline imprime logs estructurados en JSON. La ejecución completa toma apro
 - Embeddings: 1-5 minutos (según CPU)
 - Gold: < 10 segundos
 
-### Paso 5 — Verificar los artefactos generados
+### Paso 5. Verificar los artefactos generados
 
 ```bash
 # Verificar Silver (Parquet)
@@ -511,12 +513,14 @@ for etapa in linaje['etapas']:
 | ingesta | 500 | 500 |
 | normaliza | 500 | ~497–500 |
 | calidad | ~497–500 | ~490–497 |
-| embeddings | — | ~900–1100 chunks |
-| gold | — | 5 tablas |
+| embeddings | - | ~900-1100 chunks |
+| gold | - | 5 tablas |
 
-> El rango en normalización/calidad se debe al muestreo aleatorio de errores sintéticos. El `signal_id` de cada fila es **determinístico**: mismo `.mbox` → mismo `signal_id`.
+> El rango en normalizacion/calidad se debe al muestreo aleatorio de errores sinteticos. El `signal_id` de cada fila es **deterministico**: mismo `.mbox` produce el mismo `signal_id`.
 
-### Paso 6 — Verificar la API
+**Nota sobre los dos datasets del proyecto.** La tabla anterior corresponde al dataset sintetico (semilla 42, 500 correos) que cualquier persona puede regenerar para validar el pipeline sin necesidad de datos propios. La validacion completa del proyecto se realizo ademas sobre un mbox real de 3.369 correos, produciendo 3.355 filas en Silver (descarte r03: 2, r04: 12, tasa 0,42 %), 5 tablas Gold y 6.437 documentos en Chroma. Esos resultados se verificaron durante el desarrollo (rama `fixes-revision`) pero no estan commiteados como artefacto porque `data/` no se versiona. El benchmark del agente local (`docs/benchmark_agente_local.md`) se corrio por separado sobre un dataset sintetico reducido de 9 senales.
+
+### Paso 6. Verificar la API
 
 ```bash
 # Health check
@@ -532,10 +536,10 @@ curl -s -X POST http://localhost:8000/search \
   -d '{"query": "reunión proyecto", "top_k": 3}' | python -m json.tool
 ```
 
-### Paso 7 — Ejecutar los tests
+### Paso 7. Ejecutar los tests
 
 ```bash
-# Tests rápidos (sin modelo de embeddings) — deben completarse en < 30 segundos
+# Tests rapidos (sin modelo de embeddings, deben completarse en < 30 segundos)
 docker compose -f compose.yml run --rm pipeline \
   python -m pytest tests/ -v -m "not slow"
 
@@ -549,7 +553,7 @@ python -m pytest tests/ -v -m "not slow"
 
 **Resultado esperado:** todos los tests pasan (`PASSED`). Los tests marcados como `slow` requieren que el modelo de embeddings esté descargado.
 
-### Paso 8 — Limpiar el entorno
+### Paso 8. Limpiar el entorno
 
 ```bash
 # Detener servicios y eliminar volúmenes (limpieza completa)
@@ -612,7 +616,7 @@ curl http://localhost:8000/health
 # {"status": "ok"}
 ```
 
-### `GET /signals` — Consulta filtrada sobre Silver/Gold
+### `GET /signals`. Consulta filtrada sobre Silver/Gold
 
 ```bash
 # Primeros 50 registros
@@ -630,14 +634,14 @@ curl "http://localhost:8000/signals?limit=50&offset=100"
 
 | Parámetro | Tipo | Default | Descripción |
 |---|---|---|---|
-| `source` | string | — | Filtrar por fuente |
-| `actor` | string | — | Email exacto del remitente |
-| `from_ts` | datetime ISO-8601 | — | Inicio del rango temporal |
-| `to_ts` | datetime ISO-8601 | — | Fin del rango temporal |
+| `source` | string | - | Filtrar por fuente |
+| `actor` | string | - | Email exacto del remitente |
+| `from_ts` | datetime ISO-8601 | - | Inicio del rango temporal |
+| `to_ts` | datetime ISO-8601 | - | Fin del rango temporal |
 | `limit` | int (1-500) | 50 | Máximo de resultados |
 | `offset` | int | 0 | Desplazamiento para paginación |
 
-### `POST /search` — Búsqueda semántica
+### `POST /search`. Busqueda semantica
 
 ```bash
 curl -X POST http://localhost:8000/search \
@@ -654,9 +658,9 @@ curl -X POST http://localhost:8000/search \
 |---|---|---|---|
 | `query` | string | requerido | Texto libre en lenguaje natural |
 | `top_k` | int (1-100) | 10 | Número de resultados |
-| `source` | string | — | Filtro de metadata en Chroma |
+| `source` | string | - | Filtro de metadata en Chroma |
 
-La respuesta incluye `score` (similitud coseno: 1.0 = coincidencia perfecta).
+La respuesta incluye `score`, calculado como `1.0 - distancia_coseno` (equivalente a la similitud coseno). 1.0 indica coincidencia exacta y 0.0 ausencia de relacion. Con el modelo `paraphrase-multilingual-MiniLM-L12-v2` los valores caen en la practica en el rango [0, 1].
 
 ---
 
@@ -722,8 +726,8 @@ Cada ejecución del pipeline genera `data/metrics/linaje.json` (bind mount: pers
 ```
 
 **Reportes adicionales:**
-- `data/metrics/reporte_calidad.json` — detalle de la etapa de calidad
-- `data/metrics/reporte_gold.json` — validación de salud de las tablas Gold
+- `data/metrics/reporte_calidad.json`: detalle de la etapa de calidad.
+- `data/metrics/reporte_gold.json`: validacion de salud de las tablas Gold.
 
 **Logging estructurado** (JSON a stdout, un objeto por línea):
 ```json
@@ -774,8 +778,8 @@ no hay resultados, con una latencia media de 78.4 s por consulta en caliente.
 - **Verificación de no-egress** (los puertos publicados siguen funcionando en Podman rootless sobre la red interna):
 
   ```bash
-  # Desde el contenedor api: la conexión saliente debe FALLAR
-  podman exec proyectofinal_api_1 python -c \
+  # Desde el contenedor api: la conexion saliente debe FALLAR
+  docker compose -f compose.yml exec api python -c \
     "import socket; s=socket.socket(); s.settimeout(5); s.connect(('1.1.1.1',443))"
   # Esperado: OSError: [Errno 101] Network is unreachable
 
